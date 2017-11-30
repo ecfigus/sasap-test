@@ -3,28 +3,60 @@ title: "My Website"
 author: "Dr. Elizabeth Figus, BA, MA, Etc."
 date: "November 29, 2017"
 output: html_document
+editor_options: 
+  chunk_output_type: inline
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, cache = TRUE, echo = FALSE}
+escapement <- read.csv("knb.92020.1.csv", stringsAsFactors = FALSE)
+# escapement
+# names(escapement)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r, echo = FALSE}
+library(tidyr)
+library(dplyr)
+library(leaflet)
+library(ggplot2)
+library(DT)
 ```
 
-## Including Plots
+# Median annual escapement by species
 
-You can also embed plots, for example:
+```{r}
+# median annual esc. by species
+# this is an example of 'dplyr' dee-pliar pipes to reformat the dataset
+median_esc <- escapement %>%
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>%
+  group_by(Species, Location, Year) %>%
+  summarize(escapement = sum(DailyCount, na.rm = TRUE)) %>%
+  group_by(Species) %>%
+  summarize(Median_Escapement = median(escapement))
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+median_esc
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+ggplot(median_esc, aes(Species, Median_Escapement)) +
+  geom_col() +
+  theme_classic() +
+  coord_flip()
+```
+
+```{r}
+datatable(median_esc)
+```
+
+```{r}
+locations <- escapement %>%
+  distinct(Location, Latitude, Longitude) %>%
+  drop_na()
+
+#recreating GoogleMaps inside the document; you could use a MapBox tile layer, or make your own to use
+leaflet(locations) %>%
+  addTiles() %>%
+  addMarkers(~ -abs(Longitude), ~ Latitude, popup = ~ Location)
+```
+
+
+
+
